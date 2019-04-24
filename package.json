@@ -1,6 +1,6 @@
 {
   "name": "easyolmaps",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Easyolmaps is a handy library for an easy use of some openlayers functionality",
   "main": "index.js",
   "scripts": {
