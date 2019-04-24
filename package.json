@@ -1,10 +1,11 @@
 {
-  "name": "@easyolmaps/easyolmaps",
+  "name": "easyolmaps",
   "version": "0.0.1",
   "description": "Easyolmaps is a handy library for an easy use of some openlayers functionality",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,12 @@
   },
   "homepage": "https://github.com/henryvanner/easyolmaps#readme",
   "dependencies": {
+    "@babel/polyfill": "^7.4.3",
     "ol": "^5.3.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.3",
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3"
   }
 }
