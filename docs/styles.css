@@ -1,0 +1,11 @@
+a.card-body.eolm-card-link{
+    text-decoration: none;
+    color: inherit;
+}
+a.card-body.eolm-card-link:hover{
+    background: #eee;
+}
+
+span.eolm-feature-title{
+    font-weight: 600;
+}
