@@ -42,7 +42,6 @@ function Drawing(map, { shape, source, ...otherDrawInteractionOptions }) {
 	})();
 }
 
-/* prototype functions */
 const DrawingPrototype = Drawing.prototype;
 
 DrawingPrototype.on = function (event, listener) {
