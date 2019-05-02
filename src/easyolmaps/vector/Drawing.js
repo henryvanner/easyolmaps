@@ -1,7 +1,6 @@
 import Draw from 'ol/interaction/Draw';
-import Modify from 'ol/interaction/Modify';
+import Snap from 'ol/interaction/Snap';
 import { createBox } from 'ol/interaction/Draw';
-import Collection from 'ol/Collection'
 
 const interactionSettingsMap = {
 	"Point": { type: ("Point") },
@@ -15,33 +14,29 @@ const interactionSettingsMap = {
 	"Circle": { type: ("Circle") }
 };
 
-function Drawing(map, { shape, measure = false, ...DrawOptions }) {
+function Drawing(map, { shape, source, ...otherDrawInteractionOptions }) {
 	this.listeners = {};
 	this.interactions = {};
 	this.map = map;
+	this.source = source;
 
 	(() => {
-		const { listeners, interactions, map } = this,
-			settings = { ...interactionSettingsMap[shape], ...DrawOptions },
-			di = interactions.drawinteraction = new Draw(settings);
+		const { listeners, interactions } = this,
+			drawInitOptions = { ...interactionSettingsMap[shape], source, ...otherDrawInteractionOptions },
+			di = interactions.drawInteraction = new Draw(drawInitOptions);
 
 		di.on("drawstart", drawEvt => {
 			const { drawstart, drawing } = listeners,
-				{ modifyInteraction } = interactions,
 				sketch = drawEvt.feature,
 				sketchGeom = sketch.getGeometry();
 
-			map.removeInteraction(modifyInteraction);
-			drawstart && drawstart.call(null, drawEvt);
 			sketchGeom.on("change", evt => {
 				drawing && drawing.call(null, evt);
 			});
+			drawstart && drawstart.call(null, drawEvt);
 		});
 		di.on("drawend", drawEvt => {
 			const { drawend } = listeners;
-			const features = new Collection([drawEvt.feature]);
-			interactions.modifyInteraction = new Modify({ features });
-			map.addInteraction(interactions.modifyInteraction);
 			drawend && drawend.call(null, drawEvt);
 		});
 	})();
@@ -55,16 +50,17 @@ DrawingPrototype.on = function (event, listener) {
 	return this;
 }
 DrawingPrototype.start = function () {
-	const { map } = this;
-	const { drawinteraction } = this.interactions;
-	map.addInteraction(drawinteraction);
+	const { map, source, interactions } = this;
+	interactions.snapInteraction = new Snap({ source });
+	map.addInteraction(interactions.drawInteraction);
+	map.addInteraction(interactions.snapInteraction);
 }
 DrawingPrototype.finish = function () {
 	const { map } = this;
-	const { drawinteraction, modifyInteraction } = this.interactions;
-	drawinteraction.finishDrawing();
-	map.removeInteraction(drawinteraction);
-	map.removeInteraction(modifyInteraction);
+	const { drawInteraction, snapInteraction } = this.interactions;
+	drawInteraction.finishDrawing();
+	map.removeInteraction(drawInteraction);
+	map.removeInteraction(snapInteraction);
 }
 
 export default Drawing;

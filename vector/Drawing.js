@@ -7,9 +7,7 @@ exports.default = void 0;
 
 var _Draw = _interopRequireWildcard(require("ol/interaction/Draw"));
 
-var _Modify = _interopRequireDefault(require("ol/interaction/Modify"));
-
-var _Collection = _interopRequireDefault(require("ol/Collection"));
+var _Snap = _interopRequireDefault(require("ol/interaction/Snap"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -40,48 +38,40 @@ const interactionSettingsMap = {
 
 function Drawing(map, {
   shape,
-  measure = false,
-  ...DrawOptions
+  source,
+  ...otherDrawInteractionOptions
 }) {
   this.listeners = {};
   this.interactions = {};
   this.map = map;
+  this.source = source;
 
   (() => {
     const {
       listeners,
-      interactions,
-      map
+      interactions
     } = this,
-          settings = { ...interactionSettingsMap[shape],
-      ...DrawOptions
+          drawInitOptions = { ...interactionSettingsMap[shape],
+      source,
+      ...otherDrawInteractionOptions
     },
-          di = interactions.drawinteraction = new _Draw.default(settings);
+          di = interactions.drawInteraction = new _Draw.default(drawInitOptions);
     di.on("drawstart", drawEvt => {
       const {
         drawstart,
         drawing
       } = listeners,
-            {
-        modifyInteraction
-      } = interactions,
             sketch = drawEvt.feature,
             sketchGeom = sketch.getGeometry();
-      map.removeInteraction(modifyInteraction);
-      drawstart && drawstart.call(null, drawEvt);
       sketchGeom.on("change", evt => {
         drawing && drawing.call(null, evt);
       });
+      drawstart && drawstart.call(null, drawEvt);
     });
     di.on("drawend", drawEvt => {
       const {
         drawend
       } = listeners;
-      const features = new _Collection.default([drawEvt.feature]);
-      interactions.modifyInteraction = new _Modify.default({
-        features
-      });
-      map.addInteraction(interactions.modifyInteraction);
       drawend && drawend.call(null, drawEvt);
     });
   })();
@@ -98,12 +88,15 @@ DrawingPrototype.on = function (event, listener) {
 
 DrawingPrototype.start = function () {
   const {
-    map
+    map,
+    source,
+    interactions
   } = this;
-  const {
-    drawinteraction
-  } = this.interactions;
-  map.addInteraction(drawinteraction);
+  interactions.snapInteraction = new _Snap.default({
+    source
+  });
+  map.addInteraction(interactions.drawInteraction);
+  map.addInteraction(interactions.snapInteraction);
 };
 
 DrawingPrototype.finish = function () {
@@ -111,12 +104,12 @@ DrawingPrototype.finish = function () {
     map
   } = this;
   const {
-    drawinteraction,
-    modifyInteraction
+    drawInteraction,
+    snapInteraction
   } = this.interactions;
-  drawinteraction.finishDrawing();
-  map.removeInteraction(drawinteraction);
-  map.removeInteraction(modifyInteraction);
+  drawInteraction.finishDrawing();
+  map.removeInteraction(drawInteraction);
+  map.removeInteraction(snapInteraction);
 };
 
 var _default = Drawing;
