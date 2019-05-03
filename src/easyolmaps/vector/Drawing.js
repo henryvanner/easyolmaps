@@ -30,8 +30,8 @@ function Drawing(map, { shape, source, ...otherDrawInteractionOptions }) {
 				sketch = drawEvt.feature,
 				sketchGeom = sketch.getGeometry();
 
-			sketchGeom.on("change", evt => {
-				drawing && drawing.call(null, evt);
+			sketchGeom.on("change", () => {
+				drawing && drawing.call(null, drawEvt);
 			});
 			drawstart && drawstart.call(null, drawEvt);
 		});
