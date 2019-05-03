@@ -70,14 +70,6 @@ function Style({
       "longdashdot": [20, 10, 2, 10],
       "solid": []
     };
-    const alignValues = {
-      "l": "left",
-      "c": "center",
-      "r": "right",
-      "t": "top",
-      "m": "middle",
-      "b": "bottom"
-    };
     const fill1 = fill ? new _Fill.default({
       color: hex2rgb(fillColor).concat(fillOpacity)
     }) : null;

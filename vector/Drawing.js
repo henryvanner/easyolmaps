@@ -63,8 +63,8 @@ function Drawing(map, {
       } = listeners,
             sketch = drawEvt.feature,
             sketchGeom = sketch.getGeometry();
-      sketchGeom.on("change", evt => {
-        drawing && drawing.call(null, evt);
+      sketchGeom.on("change", () => {
+        drawing && drawing.call(null, drawEvt);
       });
       drawstart && drawstart.call(null, drawEvt);
     });
@@ -76,8 +76,6 @@ function Drawing(map, {
     });
   })();
 }
-/* prototype functions */
-
 
 const DrawingPrototype = Drawing.prototype;
 
