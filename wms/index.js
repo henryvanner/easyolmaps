@@ -10,6 +10,9 @@ exports.getFilter = getFilter;
 exports.setStyle = setStyle;
 exports.getStyle = getStyle;
 exports.getFeaturesAtCoordinate = getFeaturesAtCoordinate;
+exports.getLegendGraphic = getLegendGraphic;
+
+require("core-js/modules/web.dom.iterable");
 
 var _util = require("../util");
 
@@ -23,6 +26,10 @@ function getGetFeatureInfoURLAtCoordinate(ely, coordinate, map) {
 
   let url = ely.getSource().getGetFeatureInfoUrl(coordinate, mapView.getResolution(), mapView.getProjection(), getFeatureInfoParams);
   return url;
+}
+
+function getWMSURL(ely) {
+  return ely.getSource().getUrls()[0];
 }
 
 function refresh() {
@@ -66,4 +73,34 @@ function getFeaturesAtCoordinate(coordinate, map) {
       'INFO_FORMAT': 'application/json'
     }
   }).then(data => (0, _util.parseFeatures)(data, map.getView().getProjection().getCode()));
+}
+
+function getLegendGraphic({
+  legendOptions = {},
+  ...restGetLegendGraphicParams
+} = {}) {
+  const fixedParams = {
+    REQUEST: 'GetLegendGraphic',
+    LAYER: (0, _util.getLayerName)(this)
+  },
+        defaultOptions = {
+    VERSION: '1.0.0',
+    FORMAT: 'image/png'
+  };
+  const LEGEND_OPTIONS = Object.entries(legendOptions).map(e => e.join(':')).join(';');
+  const parameters = { ...defaultOptions,
+    ...restGetLegendGraphicParams,
+    LEGEND_OPTIONS,
+    ...fixedParams
+  };
+  const targetURL = (0, _util.createURLWithParameters)(getWMSURL(this), parameters);
+  return fetch(targetURL.toString()).then(response => {
+    if (response.ok) return response.blob();
+    throw new Error(response.statusText);
+  }).then(blob => {
+    const objectURL = URL.createObjectURL(blob);
+    const img = document.createElement('img');
+    img.src = objectURL;
+    return img;
+  });
 }

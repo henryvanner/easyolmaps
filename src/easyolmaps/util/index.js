@@ -1,18 +1,23 @@
 import GeoJSON from 'ol/format/GeoJSON';
 import WKT from 'ol/format/WKT';
 
-export function EasyRequest(url, { parameters = {}, dataType = 'json' } = {}, requestOptions = {}) {
-	// pre formating
-	let targetURL = new URL(url);
-
+export const createURLWithParameters = (url, parameters) => {
+	const targetURL = new URL(url);
 	for (let key in parameters) {
 		if (parameters.hasOwnProperty(key)) {
 			targetURL.searchParams.append(key, parameters[key]);
 		}
 	}
+	return targetURL;
+}
+
+export function EasyRequest(url, { parameters = {}, dataType = 'json' } = {}, requestOptions = {}) {
+
+	const targetURL = createURLWithParameters(url, parameters);
 
 	return fetch(targetURL.toString(), requestOptions)
 		.then(response => {
+			console.log('response', response);
 			if (dataType === 'json') {
 				let res = response.clone();
 				return response.json()
@@ -49,4 +54,8 @@ export function parseFeatures(geoJson, featureProjection) {
 export function getGeometryWKT(geom, options) {
 	const wktft = new WKT();
 	return wktft.writeGeometry(geom, options);
+}
+
+export function getLayerName(ely) {
+	return ely.getSource().getParams().LAYERS
 }

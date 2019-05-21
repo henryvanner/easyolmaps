@@ -15,6 +15,8 @@ var _wps = require("../wps");
 
 var _wms = require("../wms");
 
+var _rest = require("../rest");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function GeoserverLayer(lyName, {
@@ -74,5 +76,7 @@ GeoserverLayerPrototype.getAttributes = _wfs.getAttributes;
 GeoserverLayerPrototype.getBBOX = _wps.getBBOX;
 GeoserverLayerPrototype.groupBy = _wps.groupBy;
 GeoserverLayerPrototype.exportFeatures = _wfs.exportFeatures;
+GeoserverLayerPrototype.getDefinition = _rest.getDefinition;
+GeoserverLayerPrototype.getLegendGraphic = _wms.getLegendGraphic;
 var _default = GeoserverLayer;
 exports.default = _default;

@@ -2,7 +2,8 @@ import TileWMS from 'ol/source/TileWMS';
 import TileLayer from 'ol/layer/Tile';
 import { countFeatures, getFeatures, getAttributes, exportFeatures } from '../wfs';
 import { getBBOX, groupBy } from '../wps';
-import { refresh, filter, unfilter, getFilter, setStyle, getStyle, getFeaturesAtCoordinate } from '../wms';
+import { refresh, filter, unfilter, getFilter, setStyle, getStyle, getFeaturesAtCoordinate, getLegendGraphic } from '../wms';
+import { getDefinition } from '../rest';
 
 function GeoserverLayer(lyName, { url, getMapParams = {}, crossOrigin, visible = true } = {}, tileLayerOptions) {
     (() => {
@@ -47,5 +48,7 @@ GeoserverLayerPrototype.getAttributes = getAttributes;
 GeoserverLayerPrototype.getBBOX = getBBOX;
 GeoserverLayerPrototype.groupBy = groupBy;
 GeoserverLayerPrototype.exportFeatures = exportFeatures;
+GeoserverLayerPrototype.getDefinition = getDefinition;
+GeoserverLayerPrototype.getLegendGraphic = getLegendGraphic;
 
 export default GeoserverLayer;

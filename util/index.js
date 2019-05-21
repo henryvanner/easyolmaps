@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.EasyRequest = EasyRequest;
 exports.parseFeatures = parseFeatures;
 exports.getGeometryWKT = getGeometryWKT;
+exports.getLayerName = getLayerName;
+exports.createURLWithParameters = void 0;
 
 var _GeoJSON = _interopRequireDefault(require("ol/format/GeoJSON"));
 
@@ -13,12 +15,8 @@ var _WKT = _interopRequireDefault(require("ol/format/WKT"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function EasyRequest(url, {
-  parameters = {},
-  dataType = 'json'
-} = {}, requestOptions = {}) {
-  // pre formating
-  let targetURL = new URL(url);
+const createURLWithParameters = (url, parameters) => {
+  const targetURL = new URL(url);
 
   for (let key in parameters) {
     if (parameters.hasOwnProperty(key)) {
@@ -26,7 +24,19 @@ function EasyRequest(url, {
     }
   }
 
+  return targetURL;
+};
+
+exports.createURLWithParameters = createURLWithParameters;
+
+function EasyRequest(url, {
+  parameters = {},
+  dataType = 'json'
+} = {}, requestOptions = {}) {
+  const targetURL = createURLWithParameters(url, parameters);
   return fetch(targetURL.toString(), requestOptions).then(response => {
+    console.log('response', response);
+
     if (dataType === 'json') {
       let res = response.clone();
       return response.json().then(json => json).catch(() => res.text().then(text => {
@@ -66,4 +76,8 @@ function parseFeatures(geoJson, featureProjection) {
 function getGeometryWKT(geom, options) {
   const wktft = new _WKT.default();
   return wktft.writeGeometry(geom, options);
+}
+
+function getLayerName(ely) {
+  return ely.getSource().getParams().LAYERS;
 }
