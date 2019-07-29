@@ -21,7 +21,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function GeoserverLayer(lyName, {
   url,
-  getMapParams = {},
+  params = {},
   crossOrigin,
   visible = true
 } = {}, tileLayerOptions) {
@@ -29,9 +29,9 @@ function GeoserverLayer(lyName, {
     let tlo = tileLayerOptions;
 
     if (!tlo) {
-      getMapParams = {
+      params = {
         'TILED': true,
-        ...getMapParams,
+        ...params,
         'LAYERS': lyName
       };
       tlo = {
@@ -39,7 +39,7 @@ function GeoserverLayer(lyName, {
         source: new _TileWMS.default({
           url,
           serverType: "geoserver",
-          params: getMapParams,
+          params,
           crossOrigin
         })
       };
@@ -65,16 +65,15 @@ GeoserverLayer.build = function (tileLayerOptions) {
 const GeoserverLayerPrototype = GeoserverLayer.prototype;
 GeoserverLayerPrototype.refresh = _wms.refresh;
 GeoserverLayerPrototype.filter = _wms.filter;
-GeoserverLayerPrototype.unfilter = _wms.unfilter;
 GeoserverLayerPrototype.getFilter = _wms.getFilter;
 GeoserverLayerPrototype.setStyle = _wms.setStyle;
 GeoserverLayerPrototype.getStyle = _wms.getStyle;
 GeoserverLayerPrototype.getFeatures = _wfs.getFeatures;
 GeoserverLayerPrototype.getFeaturesAtCoordinate = _wms.getFeaturesAtCoordinate;
 GeoserverLayerPrototype.countFeatures = _wfs.countFeatures;
-GeoserverLayerPrototype.getAttributes = _wfs.getAttributes;
+GeoserverLayerPrototype.getFeatureTypeDescription = _wfs.getFeatureTypeDescription;
 GeoserverLayerPrototype.getBBOX = _wps.getBBOX;
-GeoserverLayerPrototype.groupBy = _wps.groupBy;
+GeoserverLayerPrototype.aggregate = _wps.aggregate;
 GeoserverLayerPrototype.exportFeatures = _wfs.exportFeatures;
 GeoserverLayerPrototype.getDefinition = _rest.getDefinition;
 GeoserverLayerPrototype.getLegendGraphic = _wms.getLegendGraphic;

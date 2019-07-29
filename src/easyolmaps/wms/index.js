@@ -1,18 +1,16 @@
-import { EasyRequest, parseFeatures, getLayerName, createURLWithParameters } from '../util';
+import {
+    EasyRequest,
+    parseFeatures,
+    getLayerName,
+    createURLWithParameters,
+    getServiceURL,
+    mergeParameters
+} from '../util';
 
-function getGetFeatureInfoURLAtCoordinate(ely, coordinate, map) {
-    let mapView = map.getView(),
-        getFeatureInfoParams = {};
-    if (ely.getFilter()) {
-        getFeatureInfoParams['CQL_FILTER'] = ely.getFilter();
-    }
-
-    let url = ely.getSource().getGetFeatureInfoUrl(coordinate, mapView.getResolution(), mapView.getProjection(), getFeatureInfoParams);
+const getGetFeatureInfoURLAtCoordinate = (layer, coordinate, map, getFeatureInfoParams) => {
+    const mapView = map.getView(),
+        url = layer.getSource().getGetFeatureInfoUrl(coordinate, mapView.getResolution(), mapView.getProjection(), getFeatureInfoParams);
     return url;
-}
-
-function getWMSURL(ely) {
-    return ely.getSource().getUrls()[0]
 }
 
 export function refresh() {
@@ -21,16 +19,15 @@ export function refresh() {
 
 export function filter(cql_filter) {
     if (cql_filter) { this.getSource().updateParams({ 'CQL_FILTER': cql_filter }); }
-    else { this.unfilter() };
-}
-
-export function unfilter() {
-    delete this.getSource().getParams()['CQL_FILTER'];
-    this.getSource().updateParams();
+    else {
+        delete this.getSource().getParams()['CQL_FILTER'];
+        this.getSource().updateParams();
+    };
 }
 
 export function getFilter() {
-    return this.getSource().getParams()["CQL_FILTER"] || '';
+    const params = this.getSource().getParams();
+    return params["CQL_FILTER"] || params['cql_filter'] || '';
 }
 
 export function setStyle(style) {
@@ -41,23 +38,19 @@ export function getStyle() {
     return this.getSource().getParams()["STYLES"] || '';
 }
 
-export function getFeaturesAtCoordinate(coordinate, map) {
-    return EasyRequest(getGetFeatureInfoURLAtCoordinate(this, coordinate, map), { parameters: { 'INFO_FORMAT': 'application/json' } })
-        .then(data => parseFeatures(data, map.getView().getProjection().getCode()));
+export function getFeaturesAtCoordinate(coordinate, map, customParams, options) {
+    return EasyRequest(getGetFeatureInfoURLAtCoordinate(this, coordinate, map, { ...customParams, 'INFO_FORMAT': 'application/json' }))
+        .then(data => parseFeatures(data, options));
 }
 
-export function getLegendGraphic({ legendOptions = {}, ...restGetLegendGraphicParams } = {}) {
-    const fixedParams = { REQUEST: 'GetLegendGraphic', LAYER: getLayerName(this) },
-        defaultOptions = { VERSION: '1.0.0', FORMAT: 'image/png' }
-    const LEGEND_OPTIONS = Object.entries(legendOptions).map(e => e.join(':')).join(';');
-    const parameters = {
-        ...defaultOptions,
-        ...restGetLegendGraphicParams,
-        LEGEND_OPTIONS,
-        ...fixedParams
-    };
-    const targetURL = createURLWithParameters(getWMSURL(this), parameters);
-    return fetch(targetURL.toString())
+export function getLegendGraphic(customParams) {
+    const parameters = mergeParameters({
+        customParams,
+        defaultParams: { VERSION: '1.0.0' },
+        hardParams: { REQUEST: 'GetLegendGraphic', LAYER: getLayerName(this), FORMAT: 'image/png' }
+    }),
+        targetURL = createURLWithParameters(getServiceURL(this), parameters);
+    return fetch(targetURL)
         .then(response => {
             if (response.ok) return response.blob();
             throw new Error(response.statusText);

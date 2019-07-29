@@ -1,4 +1,4 @@
-import { EasyRequest } from '../util';
+import { EasyRequest, getServiceURL, getLayerName } from '../util';
 import {
     XMLNode,
     WPSInput,
@@ -10,6 +10,7 @@ import {
     WPSInputReference,
     WPSExecute
 } from './Builder';
+import { transformExtent } from 'ol/proj';
 
 const executeNSs = {
     "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
@@ -24,17 +25,35 @@ const executeNSs = {
     "xsi:schemaLocation": "http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd"
 };
 
-function getLayerWPSURL(ely) {
-    return ely.getSource().getUrls()[0].replace(/wms/, 'ows');
-}
-
-export function groupBy({ aggregationAttribute, aggregationFunctions, groupByAttributes }) {
-    const url = getLayerWPSURL(this),
-        typename = this.getSource().getParams().LAYERS,
+export function aggregate({ cql_filter, aggregationAttribute, functions = [], groupByAttributes = [] }) {
+    const url = getServiceURL(this, 'ows'),
+        typename = getLayerName(this),
         workspace = typename.split(":")[0];
 
-    const aggFncs = aggregationFunctions.map(fnc => new WPSInput('function', new WPSLiteralData(fnc)));
+    const aggFncs = functions.map(fnc => new WPSInput('function', new WPSLiteralData(fnc)));
     const gpAttrs = groupByAttributes.map(attr => new WPSInput('groupByAttributes', new WPSLiteralData(attr)));
+
+    let queryInputs = [
+        new WPSInput('features', new WPSInputReference({
+            complexDataEncoding: {
+                "mimeType": "text/xml"
+            },
+            "xlink:href": "http://geoserver/wfs",
+            "method": "POST"
+        }, [
+                new XMLNode("wps:Body", {}, [
+                    new WFSGetFeature({
+                        "service": "WFS",
+                        "version": "1.0.0",
+                        "outputFormat": "GML2",
+                        [`xmlns:${workspace}`]: `${workspace}`
+                    },
+                        new WFSQuery({ "typeName": `${typename}` }))
+                ])
+            ]))
+    ];
+
+    if (cql_filter) queryInputs = queryInputs.concat(new WPSInput('filter', new WPSComplexData({ complexDataEncoding: { mimeType: 'text/plain; subtype=cql' } }, `<![CDATA[${cql_filter}]]>`)))
 
     const execute = new WPSExecute("gs:Aggregate", {
         "version": "1.0.0",
@@ -52,26 +71,7 @@ export function groupBy({ aggregationAttribute, aggregationFunctions, groupByAtt
                         new WPSExecute('gs:Query', {
                             "version": "1.0.0",
                             "service": "WPS"
-                        }, [
-                                new WPSInput('features', new WPSInputReference({
-                                    complexDataEncoding: {
-                                        "mimeType": "text/xml"
-                                    },
-                                    "xlink:href": "http://geoserver/wfs",
-                                    "method": "POST"
-                                }, [
-                                        new XMLNode("wps:Body", {}, [
-                                            new WFSGetFeature({
-                                                "service": "WFS",
-                                                "version": "1.0.0",
-                                                "outputFormat": "GML2",
-                                                [`xmlns:${workspace}`]: `${workspace}`
-                                            },
-                                                new WFSQuery({ "typeName": `${typename}` }))
-                                        ])
-                                    ])),
-                                new WPSInput('filter', new WPSComplexData({ complexDataEncoding: { mimeType: 'text/plain; subtype=cql' } }, `<![CDATA[${this.getFilter() || '1=1'}]]>`))
-                            ],
+                        }, queryInputs,
                             new WPSRawDataOutput('result', { complexDataEncoding: { mimeType: 'text/xml; subtype=wfs-collection/1.0' } }))
                     ])
                 ])),
@@ -90,11 +90,32 @@ export function groupBy({ aggregationAttribute, aggregationFunctions, groupByAtt
     })
 }
 
-export function getBBOX(map) {
-    const url = getLayerWPSURL(this),
-        typename = this.getSource().getParams().LAYERS,
+export function getBBOX({ cql_filter, transform }) {
+    const url = getServiceURL(this, 'ows'),
+        typename = getLayerName(this),
         workspace = typename.split(":")[0];
-    const filter = this.getFilter() || '1=1';
+
+    let queryInputs = [
+        new WPSInput('features', new WPSInputReference({
+            complexDataEncoding: {
+                "mimeType": "text/xml"
+            },
+            "xlink:href": "http://geoserver/wfs",
+            "method": "POST"
+        }, [
+                new XMLNode('wps:Body', {}, [
+                    new WFSGetFeature({
+                        "service": "WFS",
+                        "version": "1.0.0",
+                        "outputFormat": "GML2",
+                        [`xmlns:${workspace}`]: `${workspace}`
+                    }, new WFSQuery({ "typeName": `${typename}` }))
+                ])
+            ])),
+        new WPSInput('attribute', new WPSLiteralData('geom'))
+    ];
+
+    if (cql_filter) queryInputs = queryInputs.concat(new WPSInput('filter', new WPSComplexData({ complexDataEncoding: { mimeType: 'text/plain; subtype=cql' } }, `<![CDATA[${cql_filter}]]>`)))
 
     const execute = new WPSExecute('gs:Bounds', {
         "version": "1.0.0",
@@ -112,26 +133,7 @@ export function getBBOX(map) {
                         new WPSExecute('gs:Query', {
                             "version": "1.0.0",
                             "service": "WPS"
-                        }, [
-                                new WPSInput('features', new WPSInputReference({
-                                    complexDataEncoding: {
-                                        "mimeType": "text/xml"
-                                    },
-                                    "xlink:href": "http://geoserver/wfs",
-                                    "method": "POST"
-                                }, [
-                                        new XMLNode('wps:Body', {}, [
-                                            new WFSGetFeature({
-                                                "service": "WFS",
-                                                "version": "1.0.0",
-                                                "outputFormat": "GML2",
-                                                [`xmlns:${workspace}`]: `${workspace}`
-                                            }, new WFSQuery({ "typeName": `${typename}` }))
-                                        ])
-                                    ])),
-                                new WPSInput('attribute', new WPSLiteralData('geom')),
-                                new WPSInput('filter', new WPSComplexData({ complexDataEncoding: { mimeType: 'text/plain; subtype=cql' } }, `<![CDATA[${filter}]]>`))
-                            ],
+                        }, queryInputs,
                             new WPSRawDataOutput('result', { complexDataEncoding: { mimeType: 'text/xml; subtype=wfs-collection/1.0' } }))
                     ])
                 ]))
@@ -146,10 +148,9 @@ export function getBBOX(map) {
         body: execute.toString()
     })
         .then(xml => {
-            const crs = xml.getElementsByTagName("ows:BoundingBox")[0].getAttribute("crs"),
-                lc = (xml.getElementsByTagName("ows:LowerCorner")[0].textContent).split(" "),
+            const lc = (xml.getElementsByTagName("ows:LowerCorner")[0].textContent).split(" "),
                 uc = (xml.getElementsByTagName("ows:UpperCorner")[0].textContent).split(" ");
             const extent = [parseFloat(lc[0]), parseFloat(lc[1]), parseFloat(uc[0]), parseFloat(uc[1])];
-            return { extent, crs };
+            if (transform) return transformExtent(extent, transform.source, transform.destination);
         });
 }

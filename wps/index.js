@@ -3,12 +3,14 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.groupBy = groupBy;
+exports.aggregate = aggregate;
 exports.getBBOX = getBBOX;
 
 var _util = require("../util");
 
 var _Builder = require("./Builder");
+
+var _proj = require("ol/proj");
 
 const executeNSs = {
   "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
@@ -23,20 +25,36 @@ const executeNSs = {
   "xsi:schemaLocation": "http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd"
 };
 
-function getLayerWPSURL(ely) {
-  return ely.getSource().getUrls()[0].replace(/wms/, 'ows');
-}
-
-function groupBy({
+function aggregate({
+  cql_filter,
   aggregationAttribute,
-  aggregationFunctions,
-  groupByAttributes
+  functions = [],
+  groupByAttributes = []
 }) {
-  const url = getLayerWPSURL(this),
-        typename = this.getSource().getParams().LAYERS,
+  const url = (0, _util.getServiceURL)(this, 'ows'),
+        typename = (0, _util.getLayerName)(this),
         workspace = typename.split(":")[0];
-  const aggFncs = aggregationFunctions.map(fnc => new _Builder.WPSInput('function', new _Builder.WPSLiteralData(fnc)));
+  const aggFncs = functions.map(fnc => new _Builder.WPSInput('function', new _Builder.WPSLiteralData(fnc)));
   const gpAttrs = groupByAttributes.map(attr => new _Builder.WPSInput('groupByAttributes', new _Builder.WPSLiteralData(attr)));
+  let queryInputs = [new _Builder.WPSInput('features', new _Builder.WPSInputReference({
+    complexDataEncoding: {
+      "mimeType": "text/xml"
+    },
+    "xlink:href": "http://geoserver/wfs",
+    "method": "POST"
+  }, [new _Builder.XMLNode("wps:Body", {}, [new _Builder.WFSGetFeature({
+    "service": "WFS",
+    "version": "1.0.0",
+    "outputFormat": "GML2",
+    [`xmlns:${workspace}`]: `${workspace}`
+  }, new _Builder.WFSQuery({
+    "typeName": `${typename}`
+  }))])]))];
+  if (cql_filter) queryInputs = queryInputs.concat(new _Builder.WPSInput('filter', new _Builder.WPSComplexData({
+    complexDataEncoding: {
+      mimeType: 'text/plain; subtype=cql'
+    }
+  }, `<![CDATA[${cql_filter}]]>`)));
   const execute = new _Builder.WPSExecute("gs:Aggregate", {
     "version": "1.0.0",
     "service": "WPS",
@@ -50,24 +68,7 @@ function groupBy({
   }, [new _Builder.XMLNode("wps:Body", {}, [new _Builder.WPSExecute('gs:Query', {
     "version": "1.0.0",
     "service": "WPS"
-  }, [new _Builder.WPSInput('features', new _Builder.WPSInputReference({
-    complexDataEncoding: {
-      "mimeType": "text/xml"
-    },
-    "xlink:href": "http://geoserver/wfs",
-    "method": "POST"
-  }, [new _Builder.XMLNode("wps:Body", {}, [new _Builder.WFSGetFeature({
-    "service": "WFS",
-    "version": "1.0.0",
-    "outputFormat": "GML2",
-    [`xmlns:${workspace}`]: `${workspace}`
-  }, new _Builder.WFSQuery({
-    "typeName": `${typename}`
-  }))])])), new _Builder.WPSInput('filter', new _Builder.WPSComplexData({
-    complexDataEncoding: {
-      mimeType: 'text/plain; subtype=cql'
-    }
-  }, `<![CDATA[${this.getFilter() || '1=1'}]]>`))], new _Builder.WPSRawDataOutput('result', {
+  }, queryInputs, new _Builder.WPSRawDataOutput('result', {
     complexDataEncoding: {
       mimeType: 'text/xml; subtype=wfs-collection/1.0'
     }
@@ -85,11 +86,32 @@ function groupBy({
   });
 }
 
-function getBBOX(map) {
-  const url = getLayerWPSURL(this),
-        typename = this.getSource().getParams().LAYERS,
+function getBBOX({
+  cql_filter,
+  transform
+}) {
+  const url = (0, _util.getServiceURL)(this, 'ows'),
+        typename = (0, _util.getLayerName)(this),
         workspace = typename.split(":")[0];
-  const filter = this.getFilter() || '1=1';
+  let queryInputs = [new _Builder.WPSInput('features', new _Builder.WPSInputReference({
+    complexDataEncoding: {
+      "mimeType": "text/xml"
+    },
+    "xlink:href": "http://geoserver/wfs",
+    "method": "POST"
+  }, [new _Builder.XMLNode('wps:Body', {}, [new _Builder.WFSGetFeature({
+    "service": "WFS",
+    "version": "1.0.0",
+    "outputFormat": "GML2",
+    [`xmlns:${workspace}`]: `${workspace}`
+  }, new _Builder.WFSQuery({
+    "typeName": `${typename}`
+  }))])])), new _Builder.WPSInput('attribute', new _Builder.WPSLiteralData('geom'))];
+  if (cql_filter) queryInputs = queryInputs.concat(new _Builder.WPSInput('filter', new _Builder.WPSComplexData({
+    complexDataEncoding: {
+      mimeType: 'text/plain; subtype=cql'
+    }
+  }, `<![CDATA[${cql_filter}]]>`)));
   const execute = new _Builder.WPSExecute('gs:Bounds', {
     "version": "1.0.0",
     "service": "WPS",
@@ -103,24 +125,7 @@ function getBBOX(map) {
   }, [new _Builder.XMLNode('wps:Body', {}, [new _Builder.WPSExecute('gs:Query', {
     "version": "1.0.0",
     "service": "WPS"
-  }, [new _Builder.WPSInput('features', new _Builder.WPSInputReference({
-    complexDataEncoding: {
-      "mimeType": "text/xml"
-    },
-    "xlink:href": "http://geoserver/wfs",
-    "method": "POST"
-  }, [new _Builder.XMLNode('wps:Body', {}, [new _Builder.WFSGetFeature({
-    "service": "WFS",
-    "version": "1.0.0",
-    "outputFormat": "GML2",
-    [`xmlns:${workspace}`]: `${workspace}`
-  }, new _Builder.WFSQuery({
-    "typeName": `${typename}`
-  }))])])), new _Builder.WPSInput('attribute', new _Builder.WPSLiteralData('geom')), new _Builder.WPSInput('filter', new _Builder.WPSComplexData({
-    complexDataEncoding: {
-      mimeType: 'text/plain; subtype=cql'
-    }
-  }, `<![CDATA[${filter}]]>`))], new _Builder.WPSRawDataOutput('result', {
+  }, queryInputs, new _Builder.WPSRawDataOutput('result', {
     complexDataEncoding: {
       mimeType: 'text/xml; subtype=wfs-collection/1.0'
     }
@@ -134,13 +139,9 @@ function getBBOX(map) {
     },
     body: execute.toString()
   }).then(xml => {
-    const crs = xml.getElementsByTagName("ows:BoundingBox")[0].getAttribute("crs"),
-          lc = xml.getElementsByTagName("ows:LowerCorner")[0].textContent.split(" "),
+    const lc = xml.getElementsByTagName("ows:LowerCorner")[0].textContent.split(" "),
           uc = xml.getElementsByTagName("ows:UpperCorner")[0].textContent.split(" ");
     const extent = [parseFloat(lc[0]), parseFloat(lc[1]), parseFloat(uc[0]), parseFloat(uc[1])];
-    return {
-      extent,
-      crs
-    };
+    if (transform) return (0, _proj.transformExtent)(extent, transform.source, transform.destination);
   });
 }

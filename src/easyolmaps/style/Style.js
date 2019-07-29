@@ -12,9 +12,19 @@ function hex2rgb(hex) {
 		b = parseInt(hex.slice(5), 16);
 	return [r, g, b];
 }
+
+const dashValues = {
+	"dot": [2, 10],
+	"dash": [10, 10],
+	"dashdot": [10, 10, 2, 10],
+	"longdash": [20, 10],
+	"longdashdot": [20, 10, 2, 10],
+	"solid": []
+};
 /* end tools */
 
 function Style({
+	/* fill related properties */
 	fill,
 	fillColor = '#ee9900',
 	fillOpacity = 0.4,
@@ -23,13 +33,14 @@ function Style({
 	strokeOpacity = 1,
 	strokeWidth = 1,
 	strokeLinecap = 'round',
-	strokeDashstyle = 'solid',
-	graphic,
+	strokeDashStyle = 'solid',
 	pointRadius,
+	graphic,
 	externalGraphic,
 	graphicOpacity = 1,
+	graphicScale,//ol3 parameter
 	rotation,
-	anchor = [0.5, 0.5],//openlayers 3 parameter
+	anchor = [0.5, 0.5],//ol3 parameter
 	label,
 	labelAlign = 'center',
 	labelBaseline = 'middle',
@@ -38,23 +49,11 @@ function Style({
 	labelOutlineColor = '#ffffff',
 	labelOutlineWidth = 3,
 	labelOutlineOpacity = 1,
+	font, //ol3 parameter
 	fontColor = '#000000',
-	fontOpacity = 1,
-	fontFamily = 'sans-serif',
-	fontSize = '11px',
-	fontStyle = 'normal',
-	fontWeight = 'normal'
+	fontOpacity = 1
 }) {
 	(() => {
-		const dashValues = {
-			"dot": [2, 10],
-			"dash": [10, 10],
-			"dashdot": [10, 10, 2, 10],
-			"longdash": [20, 10],
-			"longdashdot": [20, 10, 2, 10],
-			"solid": []
-		};
-
 		const fill1 = fill ? new Fill({
 			color: hex2rgb(fillColor).concat(fillOpacity)
 		}) : null;
@@ -62,18 +61,19 @@ function Style({
 			color: hex2rgb(strokeColor).concat(strokeOpacity),
 			width: strokeWidth,
 			lineCap: strokeLinecap,
-			lineDash: strokeDashstyle ? dashValues[strokeDashstyle] : undefined
+			lineDash: strokeDashStyle ? dashValues[strokeDashStyle] : undefined
 		}) : null;
-		const image1 = pointRadius ? new CircleStyle({
+		const image1 = pointRadius && !graphic ? new CircleStyle({
 			radius: pointRadius,
 			fill: fill1,
 			stroke: stroke1
 		}) : null;
-		const icon = graphic && externalGraphic ? new Icon({
+		const icon = !pointRadius && (graphic && externalGraphic) ? new Icon({
 			src: externalGraphic,
 			opacity: graphicOpacity,
 			rotation: rotation,
-			anchor: anchor
+			anchor: anchor,
+			scale: graphicScale
 		}) : null;
 		const text1 = label ? new Text({
 			text: label,
@@ -81,7 +81,7 @@ function Style({
 			textBaseline: labelBaseline,
 			offsetX: labelXOffset,
 			offsetY: labelYOffset,
-			font: fontStyle + ' ' + fontWeight + ' ' + fontSize + ' ' + fontFamily,
+			font,
 			stroke: labelOutlineWidth ? new Stroke({
 				color: hex2rgb(labelOutlineColor).concat(labelOutlineOpacity),
 				width: labelOutlineWidth

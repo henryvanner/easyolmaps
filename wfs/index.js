@@ -5,171 +5,72 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.countFeatures = countFeatures;
 exports.getFeatures = getFeatures;
-exports.getAttributes = getAttributes;
+exports.getFeatureTypeDescription = getFeatureTypeDescription;
 exports.exportFeatures = exportFeatures;
 
 var _util = require("../util");
 
 //on every function this references an instance of EasyLayer
-function getNativeOutputFormat(format) {
-  var ft = '';
+const buildRequestURL = (layer, parameters) => (0, _util.createURLWithParameters)((0, _util.getServiceURL)(layer, 'wfs'), parameters);
 
-  switch (format) {
-    case 'csv':
-      ft = 'csv';
-      break;
-
-    case 'json':
-      ft = 'application/json';
-      break;
-
-    case 'jsonp':
-      ft = 'text/javascript';
-      break;
-
-    case 'gml2':
-      ft = 'GML2';
-      break;
-
-    case 'gml3':
-      ft = 'GML3';
-      break;
-
-    case 'shapefile':
-      ft = 'shape-zip';
-      break;
-
-    case 'excel':
-      ft = 'excel';
-      break;
-
-    case 'excel2007':
-      ft = 'excel2007';
-      break;
-
-    case 'autocad':
-      ft = 'dxf';
-      break;
-  }
-
-  return ft;
-}
-
-function getLayerWFSURL(ely) {
-  return ely.getSource().getUrls()[0].replace(/wms/, 'wfs');
-}
-
-function inlineJSON(json) {
-  let attrs = [];
-
-  for (let key in json) {
-    if (json.hasOwnProperty(key)) {
-      attrs.push(`${key}:${json[key]}`);
+const getGenericGefFeatureRequest = (layer, {
+  customParams,
+  hardParams
+}) => {
+  const params = (0, _util.mergeParameters)({
+    defaultParams: {
+      version: '2.0.0'
+    },
+    customParams,
+    hardParams: {
+      request: 'GetFeature',
+      typeNames: (0, _util.getLayerName)(layer),
+      ...hardParams
     }
-  }
-
-  return attrs.join(';');
-}
-
-function performDataExporting(url, parameters) {
-  let targetURL = new URL(url);
-
-  for (let key in parameters) {
-    if (parameters.hasOwnProperty(key)) {
-      targetURL.searchParams.append(key, parameters[key]);
-    }
-  }
-
-  window.open(targetURL.toString(), "_blank");
-}
-
-function countFeatures({
-  cql_filter,
-  ...restOfGetFeatureParams
-} = {}) {
-  const url = getLayerWFSURL(this),
-        wmsParams = this.getSource().getParams();
-  let conds = [];
-  let parameters = { ...restOfGetFeatureParams,
-    request: 'GetFeature',
-    resultType: 'hits',
-    typeNames: wmsParams.LAYERS,
-    version: '1.1.0'
-  };
-
-  if (this.getFilter()) {
-    conds.push(this.getFilter());
-  }
-
-  ;
-
-  if (cql_filter) {
-    conds.push(cql_filter);
-  }
-
-  ;
-
-  if (conds.length) {
-    parameters['cql_filter'] = conds.join(' AND ');
-  }
-
-  ;
-  return (0, _util.EasyRequest)(url, {
-    parameters,
-    dataType: 'xml'
-  }).then(xmlDoc => {
-    let nof = xmlDoc.querySelector('FeatureCollection').getAttribute("numberOfFeatures");
-    return nof;
   });
+  if (!params.cql_filter) delete params.cql_filter;
+  if (!params.CQL_FILTER) delete params.CQL_FILTER;
+  return buildRequestURL(layer, params);
+};
+
+function countFeatures(customParams) {
+  const requestURL = getGenericGefFeatureRequest(this, {
+    customParams,
+    hardParams: {
+      version: '1.1.0',
+      resultType: 'hits'
+    }
+  });
+  return (0, _util.EasyRequest)(requestURL, {
+    dataType: 'xml'
+  }).then(xmlDoc => xmlDoc.querySelector('FeatureCollection').getAttribute("numberOfFeatures"));
 }
 
 ;
 
-function getFeatures({
-  format = 'json',
-  dxfSpecificOptions = {},
-  exportFeatures = false,
-  ...getFeaturesParams
-}, featureProjection) {
-  const url = getLayerWFSURL(this),
-        wmsParams = this.getSource().getParams();
-  let parameters = { ...getFeaturesParams,
-    version: '2.0.0',
-    request: 'GetFeature',
-    typeNames: wmsParams.LAYERS,
-    outputFormat: getNativeOutputFormat(format)
-  };
-  dxfSpecificOptions.layers = dxfSpecificOptions.layers || wmsParams.LAYERS;
-  dxfSpecificOptions && (parameters.format_options = inlineJSON(dxfSpecificOptions));
-
-  if (exportFeatures) {
-    return performDataExporting(url, parameters);
-  }
-
-  return (0, _util.EasyRequest)(url, {
-    parameters
-  }).then(data => (0, _util.parseFeatures)(data, featureProjection));
+function getFeatures(customParams, options) {
+  const requestURL = getGenericGefFeatureRequest(this, {
+    customParams,
+    hardParams: {
+      outputFormat: 'application/json'
+    }
+  });
+  return (0, _util.EasyRequest)(requestURL).then(data => (0, _util.parseFeatures)(data, options));
 }
 
-function getAttributes() {
-  const url = getLayerWFSURL(this),
-        wmsParams = this.getSource().getParams();
-  let parameters = {
+function getFeatureTypeDescription() {
+  const parameters = {
     version: '2.0.0',
     request: 'DescribeFeatureType',
-    typename: wmsParams.LAYERS,
+    typename: (0, _util.getLayerName)(this),
     outputFormat: 'application/json'
   };
-  return (0, _util.EasyRequest)(url, {
-    parameters
-  });
+  const url = buildRequestURL(this, parameters);
+  return (0, _util.EasyRequest)(url);
 }
 
-function exportFeatures(options = {}) {
-  const opts = {
-    exportFeatures: true,
-    format: 'excel',
-    ...options
-  };
-  return getFeatures.call(this, opts, null);
+function exportFeatures(customParams) {
+  return getGenericGefFeatureRequest(this, {
+    customParams
+  });
 }

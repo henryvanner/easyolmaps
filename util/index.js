@@ -5,13 +5,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.EasyRequest = EasyRequest;
 exports.parseFeatures = parseFeatures;
-exports.getGeometryWKT = getGeometryWKT;
 exports.getLayerName = getLayerName;
-exports.createURLWithParameters = void 0;
+exports.getServiceURL = getServiceURL;
+exports.mergeParameters = exports.createURLWithParameters = void 0;
 
 var _GeoJSON = _interopRequireDefault(require("ol/format/GeoJSON"));
-
-var _WKT = _interopRequireDefault(require("ol/format/WKT"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -29,14 +27,21 @@ const createURLWithParameters = (url, parameters) => {
 
 exports.createURLWithParameters = createURLWithParameters;
 
+const mergeParameters = ({
+  defaultParams,
+  customParams,
+  hardParams
+}) => ({ ...defaultParams,
+  ...customParams,
+  ...hardParams
+});
+
+exports.mergeParameters = mergeParameters;
+
 function EasyRequest(url, {
-  parameters = {},
   dataType = 'json'
 } = {}, requestOptions = {}) {
-  const targetURL = createURLWithParameters(url, parameters);
-  return fetch(targetURL.toString(), requestOptions).then(response => {
-    console.log('response', response);
-
+  return fetch(url, requestOptions).then(response => {
     if (dataType === 'json') {
       let res = response.clone();
       return response.json().then(json => json).catch(() => res.text().then(text => {
@@ -64,20 +69,16 @@ function parseXML(text) {
   return parser.parseFromString(text, 'application/xml');
 }
 
-function parseFeatures(geoJson, featureProjection) {
-  const dataProjection = geoJson.crs ? 'EPSG:' + geoJson.crs.properties.name.match(/EPSG::(\d+)/)[1] : null,
-        fmt = new _GeoJSON.default({
-    dataProjection,
-    featureProjection
-  });
-  return fmt.readFeatures(geoJson);
+function parseFeatures(geoJson, options) {
+  const fmt = new _GeoJSON.default();
+  return fmt.readFeatures(geoJson, options);
 }
 
-function getGeometryWKT(geom, options) {
-  const wktft = new _WKT.default();
-  return wktft.writeGeometry(geom, options);
+function getLayerName(layer) {
+  return layer.getSource().getParams().LAYERS;
 }
 
-function getLayerName(ely) {
-  return ely.getSource().getParams().LAYERS;
+function getServiceURL(layer, service = 'wms') {
+  const baserURL = layer.getSource().getUrls()[0];
+  return service === 'wms' ? baserURL : baserURL.replace(/wms/, service);
 }

@@ -1,21 +1,21 @@
 import TileWMS from 'ol/source/TileWMS';
 import TileLayer from 'ol/layer/Tile';
-import { countFeatures, getFeatures, getAttributes, exportFeatures } from '../wfs';
-import { getBBOX, groupBy } from '../wps';
-import { refresh, filter, unfilter, getFilter, setStyle, getStyle, getFeaturesAtCoordinate, getLegendGraphic } from '../wms';
+import { countFeatures, getFeatures, getFeatureTypeDescription, exportFeatures } from '../wfs';
+import { getBBOX, aggregate } from '../wps';
+import { refresh, filter, getFilter, setStyle, getStyle, getFeaturesAtCoordinate, getLegendGraphic } from '../wms';
 import { getDefinition } from '../rest';
 
-function GeoserverLayer(lyName, { url, getMapParams = {}, crossOrigin, visible = true } = {}, tileLayerOptions) {
+function GeoserverLayer(lyName, { url, params = {}, crossOrigin, visible = true } = {}, tileLayerOptions) {
     (() => {
         let tlo = tileLayerOptions;
         if (!tlo) {
-            getMapParams = { 'TILED': true, ...getMapParams, 'LAYERS': lyName };
+            params = { 'TILED': true, ...params, 'LAYERS': lyName };
             tlo = {
                 visible,
                 source: new TileWMS({
                     url,
                     serverType: "geoserver",
-                    params: getMapParams,
+                    params,
                     crossOrigin
                 })
             }
@@ -37,16 +37,15 @@ const GeoserverLayerPrototype = GeoserverLayer.prototype;
 
 GeoserverLayerPrototype.refresh = refresh;
 GeoserverLayerPrototype.filter = filter;
-GeoserverLayerPrototype.unfilter = unfilter;
 GeoserverLayerPrototype.getFilter = getFilter;
 GeoserverLayerPrototype.setStyle = setStyle;
 GeoserverLayerPrototype.getStyle = getStyle;
 GeoserverLayerPrototype.getFeatures = getFeatures;
 GeoserverLayerPrototype.getFeaturesAtCoordinate = getFeaturesAtCoordinate;
 GeoserverLayerPrototype.countFeatures = countFeatures;
-GeoserverLayerPrototype.getAttributes = getAttributes;
+GeoserverLayerPrototype.getFeatureTypeDescription = getFeatureTypeDescription;
 GeoserverLayerPrototype.getBBOX = getBBOX;
-GeoserverLayerPrototype.groupBy = groupBy;
+GeoserverLayerPrototype.aggregate = aggregate;
 GeoserverLayerPrototype.exportFeatures = exportFeatures;
 GeoserverLayerPrototype.getDefinition = getDefinition;
 GeoserverLayerPrototype.getLegendGraphic = getLegendGraphic;

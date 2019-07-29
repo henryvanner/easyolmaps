@@ -1,5 +1,4 @@
 import GeoJSON from 'ol/format/GeoJSON';
-import WKT from 'ol/format/WKT';
 
 export const createURLWithParameters = (url, parameters) => {
 	const targetURL = new URL(url);
@@ -11,13 +10,12 @@ export const createURLWithParameters = (url, parameters) => {
 	return targetURL;
 }
 
-export function EasyRequest(url, { parameters = {}, dataType = 'json' } = {}, requestOptions = {}) {
+export const mergeParameters = ({ defaultParams, customParams, hardParams }) => ({ ...defaultParams, ...customParams, ...hardParams });
 
-	const targetURL = createURLWithParameters(url, parameters);
+export function EasyRequest(url, { dataType = 'json' } = {}, requestOptions = {}) {
 
-	return fetch(targetURL.toString(), requestOptions)
+	return fetch(url, requestOptions)
 		.then(response => {
-			console.log('response', response);
 			if (dataType === 'json') {
 				let res = response.clone();
 				return response.json()
@@ -45,17 +43,16 @@ function parseXML(text) {
 	return parser.parseFromString(text, 'application/xml');
 }
 
-export function parseFeatures(geoJson, featureProjection) {
-	const dataProjection = geoJson.crs ? 'EPSG:' + geoJson.crs.properties.name.match(/EPSG::(\d+)/)[1] : null,
-		fmt = new GeoJSON({ dataProjection, featureProjection });
-	return fmt.readFeatures(geoJson);
+export function parseFeatures(geoJson, options) {
+	const fmt = new GeoJSON();
+	return fmt.readFeatures(geoJson, options);
 }
 
-export function getGeometryWKT(geom, options) {
-	const wktft = new WKT();
-	return wktft.writeGeometry(geom, options);
+export function getLayerName(layer) {
+	return layer.getSource().getParams().LAYERS
 }
 
-export function getLayerName(ely) {
-	return ely.getSource().getParams().LAYERS
+export function getServiceURL(layer, service = 'wms') {
+	const baserURL = layer.getSource().getUrls()[0];
+	return service === 'wms' ? baserURL : baserURL.replace(/wms/, service);
 }
