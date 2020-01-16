@@ -1,6 +1,6 @@
 {
   "name": "easyolmaps",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Easyolmaps is a handy library for an easy use of some openlayers functionality",
   "dependencies": {
     "core-js": "^3.6.4",
