@@ -20,6 +20,9 @@ const getGetFeatureInfoURLAtCoordinate = (layer, coordinate, map, getFeatureInfo
 };
 
 function refresh() {
+  this.getSource().updateParams({
+    "time": Date.now()
+  });
   this.getSource().refresh();
 }
 
