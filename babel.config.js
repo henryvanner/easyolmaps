@@ -7,7 +7,10 @@ const presets = [
         chrome: "67"
       },
       useBuiltIns: "usage",
-      corejs: '2.x'
+      corejs: {
+        version: 3,
+        proposals: true
+      }
     },
   ],
 ];
